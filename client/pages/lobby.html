@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Marvel Lobby</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="../styles/lobby.css" />
+    </head>
+    <body>
+        <div class="lobby-wrapper">
+            <!-- Левая часть -->
+            <div class="lobby-left">
+                <img
+                    src="../assets/lobby/left side.png"
+                    alt="Texture"
+                    class="left-texture"
+                />
+                <!-- 1. Верх: кнопка назад + инпут с кнопкой -->
+                <div class="top-controls">
+                    <button class="back-button bebas-neue-regular">BACK</button>
+                    <div class="invite-wrapper">
+                        <input type="text" placeholder="INVITE PLAYER" />
+                        <button class="invite-button bebas-neue-regular">
+                            INVITE
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. Игроки и VS -->
+                <div class="players-section">
+                    <div class="player player-1">
+                        <div class="avatar hex">
+                            <img
+                                src="../assets/icons/dr strange icon.png"
+                                alt="Player 1"
+                            />
+                        </div>
+                        <div class="nickname-wrapper">
+                            <span>NICKNAME</span>
+                        </div>
+                    </div>
+                    <div class="vs-icon">
+                        <img src="../assets/lobby/VS sign.png" alt="VS" />
+                    </div>
+                    <div class="player player-2">
+                        <div class="avatar hex empty">
+                            <img
+                                src="../assets/icons/empty icon.png"
+                                alt="Player 1"
+                            />
+                        </div>
+                        <div class="nickname-wrapper"><span> </span></div>
+                    </div>
+                </div>
+
+                <!-- 3. Кнопка READY -->
+                <div class="ready-section">
+                    <button class="ready-button bebas-neue-regular">
+                        READY
+                    </button>
+                </div>
+
+                <!-- 4. Вопрос -->
+                <div class="help-section">
+                    <button class="help-button bebas-neue-regular">?</button>
+                </div>
+            </div>
+
+            <!-- Правая часть: фоновое изображение -->
+            <div class="lobby-right">
+                <img
+                    src="../assets/lobby/right side.png"
+                    alt="Marvel Background"
+                />
+            </div>
+
+            <!-- Doctor Strange + QR — фиксированная -->
+            <div class="doctor-strange-fixed">
+                <img
+                    src="../assets/lobby/qr code.png"
+                    alt="Doctor Strange with QR"
+                />
+            </div>
+        </div>
+        <div id="avatarModal" class="modal">
+            <div class="modal-content">
+                <h2>Select Avatar</h2>
+                <div class="avatars">
+                    <img src="images/avatar1.png" alt="Avatar 1" />
+                    <img src="images/avatar2.png" alt="Avatar 2" />
+                    <img src="images/avatar3.png" alt="Avatar 3" />
+                </div>
+            </div>
+        </div>
+        <script src="../js/lobby.js"></script>
+    </body>
+</html>

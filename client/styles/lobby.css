@@ -1,0 +1,395 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body,
+html {
+    width: 100%;
+    height: 100%;
+    font-family: 'Bebas Neue', sans-serif;
+    font-weight: 400;
+    font-style: normal;
+    overflow: hidden;
+}
+.bebas-neue-regular {
+    font-family: 'Bebas Neue', sans-serif;
+    font-weight: 400;
+    font-style: normal;
+}
+
+.lobby-wrapper {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    position: relative;
+}
+
+/* Правая часть с фоном */
+.lobby-right {
+    flex: 1;
+    position: relative;
+    z-index: 1;
+}
+.lobby-right img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Левая часть */
+.lobby-left {
+    width: 43%;
+    padding: 25px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: #16093c;
+    position: relative;
+}
+.left-texture {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.lobby-left > *:not(.left-texture) {
+    position: relative;
+    z-index: 2;
+}
+
+/* --- 1. TOP --- */
+.top-controls {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.back-button {
+    font-size: 24px;
+    padding: 0 30px;
+    background: #d9d9d9;
+    box-shadow: 0 0 0 3px #f6c456;
+    color: #04021c;
+
+    border: none;
+    outline: none;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    z-index: 0;
+    transition: color 0.3s ease;
+}
+
+.back-button::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -350%;
+    width: 300%;
+    height: 200%;
+    background-color: #f6c456;
+    transform: skewX(-45deg);
+    transition: left 0.3s ease-in-out;
+    z-index: -1;
+}
+.back-button:hover::before {
+    left: -150%;
+}
+
+.back-button:hover {
+    scale: 1.01;
+    color: white;
+}
+
+/* Input + button внутри */
+.invite-wrapper {
+    position: relative;
+    flex: 1;
+}
+
+.invite-wrapper input {
+    width: 100%;
+
+    font-family: 'Bebas Neue', sans-serif;
+    font-weight: 400;
+    font-style: normal;
+    font-size: 18px;
+    text-indent: 10px;
+
+    color: #04021c;
+    background: #d9d9d9;
+    clip-path: polygon(5% 0%, 95% 0%, 100% 50%, 95% 100%, 5% 100%, 0% 50%);
+    padding: 10px 90px 10px 20px;
+    border: none;
+    outline: none;
+}
+.invite-wrapperinput::placeholder {
+    color: #909090;
+}
+
+.invite-wrapper .invite-button {
+    position: absolute;
+    width: 160px;
+    top: 5%;
+    right: 1%;
+    height: 90%;
+    font-size: 28px;
+    background-color: #722db2;
+    color: #04021c;
+    clip-path: polygon(12% 0%, 88% 0%, 100% 50%, 88% 100%, 12% 100%, 0% 50%);
+    border: none;
+    padding: 0 25px;
+    cursor: pointer;
+}
+.invite-button::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -350%;
+    width: 300%;
+    height: 200%;
+    background-color: #291a37;
+    transform: skewX(-45deg);
+    transition: left 0.3s ease-in-out;
+    z-index: -1;
+}
+
+.invite-button:hover::before {
+    left: -150%;
+}
+
+.invite-button:hover {
+    color: white;
+}
+
+/* --- 2. PLAYERS --- */
+.players-section {
+    /* padding-top: 50px; */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 140px;
+}
+
+.player {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.hex {
+    width: 200px;
+    height: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.hex img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.nickname-wrapper {
+    position: relative;
+    margin-top: 10px;
+    width: 180px;
+    height: 45px;
+    padding: 5px 15px 3px;
+    background: #bebebe;
+    font-size: 26px;
+    text-align: center;
+    clip-path: polygon(12% 0%, 88% 0%, 100% 50%, 88% 100%, 12% 100%, 0% 50%);
+    z-index: 1;
+    line-height: 37px;
+}
+.nickname-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 3px;
+    width: calc(174px);
+    height: calc(40px);
+    background: #1b0f3a;
+    clip-path: polygon(12% 0%, 88% 0%, 99% 50%, 88% 100%, 12% 100%, 1% 50%);
+    z-index: -1;
+}
+.nickname-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 6px;
+    width: calc(168px);
+    height: calc(36px);
+    background: #f6c456;
+    clip-path: polygon(11% 0%, 89% 0%, 99% 50%, 89% 100%, 11% 100%, 1% 50%);
+    z-index: -1;
+}
+
+/* VS ICON  */
+.vs-icon img {
+    height: 140px;
+}
+
+/* --- 3. READY --- */
+.ready-section {
+    display: flex;
+    justify-content: end;
+}
+
+.ready-button {
+    border: none;
+    cursor: pointer;
+    font-size: 28px;
+    padding: 2px 30px 1px;
+    background: #bebebe;
+    box-shadow: 0 0 0 3px #722db2;
+    color: #04021c;
+
+    position: relative;
+    overflow: hidden;
+    z-index: 0;
+    transition: color 0.3s ease;
+}
+.ready-button::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -350%;
+    width: 300%;
+    height: 200%;
+    background-color: #722db2;
+    transform: skewX(-45deg);
+    transition: left 0.3s ease-in-out;
+    z-index: -1;
+}
+
+.ready-button:hover::before {
+    left: -150%;
+}
+
+.ready-button:hover {
+    scale: 1.01;
+    color: white;
+}
+
+/* --- 4. ? --- */
+.help-section {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.help-button {
+    width: 45px;
+    height: 45px;
+    background: #f6c456;
+    font-size: 24px;
+    color: black;
+    font-weight: bold;
+    cursor: pointer;
+    clip-path: polygon(50% 3%, 93% 25%, 93% 75%, 50% 97%, 7% 75%, 7% 25%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-sizing: border-box;
+    background-clip: padding-box;
+}
+
+.help-button::before {
+    content: '';
+    position: absolute;
+    width: calc(40px);
+    height: calc(40px);
+    background: #722db2;
+    clip-path: polygon(50% 3%, 93% 25%, 93% 75%, 50% 97%, 7% 75%, 7% 25%);
+    z-index: -1;
+}
+.help-button::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -350%;
+    width: 300%;
+    height: 200%;
+    background-color: #f6c456;
+    transform: skewX(-45deg);
+    transition: left 0.3s ease-in-out;
+    z-index: -1;
+}
+.help-button:hover::after {
+    left: -150%;
+}
+
+.help-button:hover {
+    color: white;
+    scale: 1.04;
+}
+
+/* Doctor Strange + QR */
+.doctor-strange-fixed {
+    position: absolute;
+    left: 42%;
+    bottom: -5px;
+    z-index: 10;
+}
+
+.doctor-strange-fixed img {
+    height: 150px;
+    object-fit: contain;
+}
+/**/
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+.modal-content {
+    background: #fff;
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.modal-content h2 {
+    margin-bottom: 20px;
+    color: #000;
+}
+
+.avatars {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.avatars img {
+    width: 80px;
+    height: 80px;
+    border: 3px solid transparent;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: transform 0.2s, border 0.2s;
+}
+
+.avatars img:hover {
+    transform: scale(1.1);
+    border-color: #722db2;
+}
