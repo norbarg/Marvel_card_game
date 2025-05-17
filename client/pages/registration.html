@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>registration</title>
+        <link rel="stylesheet" href="../styles/registration.css" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap"
+            rel="stylesheet"
+        />
+    </head>
+    <body>
+        <div class="background">
+            <img
+                src="../assets/registration/background.png"
+                class="overlay"
+                alt="Comic Overlay"
+            />
+        </div>
+
+        <div class="form-wrapper">
+            <img
+                src="../assets/registration/booooom.png"
+                class="form-bg"
+                alt="Form Background"
+            />
+            <div class="form-container">
+                <div class="tabs">
+                    <button id="sign-in-tab" class="active bebas-neue-regular">
+                        SIGN IN
+                    </button>
+                    <button id="sign-up-tab" class="bebas-neue-regular">
+                        SIGN UP
+                    </button>
+                </div>
+                <div class="fields">
+                    <div class="field-group">
+                        <label for="nickname">NICKNAME</label>
+                        <input
+                            type="text"
+                            id="nickname"
+                            placeholder="Nickname"
+                        />
+                    </div>
+                    <div class="field-group">
+                        <label for="password">PASSWORD</label>
+                        <input
+                            type="password"
+                            id="password"
+                            placeholder="Password"
+                        />
+                    </div>
+                    <div class="field-group hidden" id="confirm-group">
+                        <label for="confirm-password">CONFIRM PASSWORD</label>
+                        <input
+                            type="password"
+                            id="confirm-password"
+                            placeholder="CONFIRM Password"
+                        />
+                    </div>
+                </div>
+                <button class="enter-btn bebas-neue-regular">ENTER</button>
+            </div>
+        </div>
+
+        <script src="../js/registration.js"></script>
+    </body>
+</html>
