@@ -3,6 +3,11 @@
     <head>
         <meta charset="UTF-8" />
         <title>Marvel Lobby</title>
+        <link
+            rel="shortcut icon"
+            href="../assets/icons/hulk icon.png"
+            type="image/png"
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
@@ -24,7 +29,11 @@
                 <div class="top-controls">
                     <button class="back-button bebas-neue-regular">BACK</button>
                     <div class="invite-wrapper">
-                        <input type="text" placeholder="INVITE PLAYER" />
+                        <input
+                            type="text"
+                            id="inviteInput"
+                            placeholder="INVITE PLAYER"
+                        />
                         <button class="invite-button bebas-neue-regular">
                             INVITE
                         </button>
@@ -34,7 +43,7 @@
                 <!-- 2. Игроки и VS -->
                 <div class="players-section">
                     <div class="player player-1">
-                        <div class="avatar hex">
+                        <div class="avatar hex you">
                             <img
                                 src="../assets/icons/dr strange icon.png"
                                 alt="Player 1"
@@ -89,11 +98,33 @@
         </div>
         <div id="avatarModal" class="modal">
             <div class="modal-content">
-                <h2>Select Avatar</h2>
+                <h2 class="bebas-neue-regular">Select Avatar</h2>
                 <div class="avatars">
-                    <img src="images/avatar1.png" alt="Avatar 1" />
-                    <img src="images/avatar2.png" alt="Avatar 2" />
-                    <img src="images/avatar3.png" alt="Avatar 3" />
+                    <img src="../assets/icons/adam icon.png" alt="Avatar 1" />
+                    <img src="../assets/icons/blade icon.png" alt="Avatar 2" />
+                    <img
+                        src="../assets/icons/dr strange icon.png"
+                        alt="Avatar 3"
+                    />
+                    <img
+                        src="../assets/icons/hellcat icon.png"
+                        alt="Avatar 4"
+                    />
+                    <img src="../assets/icons/hulk icon.png" alt="Avatar 5" />
+                    <img
+                        src="../assets/icons/iron man icon.png"
+                        alt="Avatar 6"
+                    />
+                    <img src="../assets/icons/medusa icon.png" alt="Avatar 7" />
+                    <img
+                        src="../assets/icons/spider man icon.png"
+                        alt="Avatar 8"
+                    />
+                    <img src="../assets/icons/tanos icon.png" alt="Avatar 9" />
+                    <img
+                        src="../assets/icons/carnage iconpng.png"
+                        alt="Avatar 10"
+                    />
                 </div>
             </div>
         </div>
