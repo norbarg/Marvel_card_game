@@ -167,3 +167,47 @@ button:hover {
 .hidden {
     display: none;
 }
+
+/* контейнер ошибки */
+#auth-error {
+    position: fixed;
+    bottom: -60px; /* изначально за экраном */
+    left: 50%;
+    transform: translateX(-50%);
+
+    width: 190px;
+    height: 40px;
+
+    background-color: #f6c456;
+    color: #d9d9d9;
+    clip-path: polygon(12% 0%, 88% 0%, 100% 50%, 88% 100%, 12% 100%, 0% 50%);
+    border: none;
+    padding: 0 25px;
+
+    font-family: 'Bebas Neue', sans-serif;
+    font-weight: 400;
+    font-style: normal;
+    font-size: 18px;
+    text-align: center;
+    line-height: 40px;
+    white-space: nowrap;
+    transition: bottom 0.5s ease-in-out;
+    z-index: 1000;
+}
+
+#auth-error::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: calc(98%);
+    height: calc(90%);
+    background: #722db2;
+    clip-path: polygon(12% 0%, 88% 0%, 100% 50%, 88% 100%, 12% 100%, 0% 50%);
+    transition: color 0.3s ease;
+    z-index: -1;
+}
+/* класс для показа ошибки */
+#auth-error.show {
+    bottom: 30px; /* зона видимости над формой */
+}

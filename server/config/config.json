@@ -1,0 +1,17 @@
+{
+    "mysql": {
+        "host": "localhost",
+        "port": 3306,
+        "user": "norbarg",
+        "password": "securepass",
+        "database": "marvel_cards",
+        "waitForConnections": true,
+        "connectionLimit": 10,
+        "queueLimit": 0
+    },
+    "server": {
+        "port": 3000,
+        "corsOrigin": "*",
+        "jwtSecret": "s0m3_5up3r_s3cr3t_k3y"
+    }
+}
