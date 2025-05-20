@@ -75,6 +75,7 @@ function cleanupLobby() {
 
     // заблокировать READY
     readyBtn.disabled = true;
+    readyBtn.classList.remove('enabled');
 
     // сбросить кнопку INVITE
     inviteBtn.textContent = 'INVITE';
@@ -155,8 +156,8 @@ socket.on('invite_received', ({ fromUserId, fromNickname, fromAvatar }) => {
     pendingInvite = { fromUserId, fromNickname, fromAvatar };
 
     // Покажем модал:
-    inviteTextEl.textContent = `${fromNickname} приглашает вас в игру. Принять?`;
-    inviteModal.style.display = 'flex';
+    inviteTextEl.textContent = `${fromNickname} invites you to the game. Accept?`;
+    inviteModal.classList.add('show');
 });
 
 // ==== в обработчике ACCEPT ====
@@ -175,6 +176,7 @@ acceptBtn.addEventListener('click', () => {
     oppHex.src = fromAvatar;
     oppNickEl.textContent = fromNickname;
     readyBtn.disabled = false;
+    readyBtn.classList.add('enabled');
 
     // сохраняем, чтобы пережить перезагрузку
     localStorage.setItem('sessionId', sessionId);
@@ -188,7 +190,7 @@ acceptBtn.addEventListener('click', () => {
     );
 
     // прячем модал и сбрасываем pending
-    inviteModal.style.display = 'none';
+    inviteModal.classList.remove('show');
     pendingInvite = null;
 });
 
@@ -197,22 +199,27 @@ declineBtn.addEventListener('click', () => {
     if (!pendingInvite) return;
     const { fromUserId } = pendingInvite;
     socket.emit('invite_response', { fromUserId, accept: false });
-    inviteModal.style.display = 'none';
+
+    inviteModal.classList.remove('show');
     // очищаем UI лобби, так как мы отказались
     cleanupLobby();
     inRoom = false;
     sessionId = null;
     pendingInvite = null;
+    localStorage.removeItem('sessionId');
+    localStorage.removeItem('opponent');
 });
 
 // Клик вне модала — закрыть
 window.addEventListener('click', (e) => {
     if (e.target === inviteModal) {
-        inviteModal.style.display = 'none';
+        inviteModal.classList.remove('show');
         cleanupLobby();
         inRoom = false;
         sessionId = null;
         pendingInvite = null;
+        localStorage.removeItem('sessionId');
+        localStorage.removeItem('opponent');
     }
 });
 
@@ -225,6 +232,7 @@ socket.on(
             oppHex.src = fromAvatar;
             oppNickEl.textContent = fromNickname;
             readyBtn.disabled = false;
+            readyBtn.classList.add('enabled');
             sessionId = `battle_${fromUserId}_${myUserId}`;
             inRoom = true;
             // сохраняем, чтобы пережить перезагрузку

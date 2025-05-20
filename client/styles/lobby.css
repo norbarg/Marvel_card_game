@@ -267,7 +267,7 @@ html {
     font-size: 28px;
     padding: 2px 30px 1px;
     background: #bebebe;
-    box-shadow: 0 0 0 3px #722db2;
+    box-shadow: 0 0 0 3px #4b1b78;
     color: #04021c;
 
     position: relative;
@@ -275,7 +275,11 @@ html {
     z-index: 0;
     transition: color 0.3s ease;
 }
-.ready-button::before {
+.ready-button.enabled {
+    background-color: #d9d9d9; /* цвет текста */
+    box-shadow: 0 0 0 3px #4b1b78; /* рамка делаем светлее */
+}
+.enabled.ready-button::before {
     content: '';
     position: absolute;
     top: -50%;
@@ -288,11 +292,11 @@ html {
     z-index: -1;
 }
 
-.ready-button:hover::before {
+.enabled.ready-button:hover::before {
     left: -150%;
 }
 
-.ready-button:hover {
+.ready-button.enabled:hover {
     scale: 1.01;
     color: white;
 }
@@ -363,6 +367,62 @@ html {
     object-fit: contain;
 }
 /**/
+/* убираем фон-оверлей, делаем только контейнер сообщения */
+#inviteModal {
+    position: fixed;
+    top: -150px;
+    left: 70%;
+    transform: translateX(-50%);
+    width: 80%;
+    max-width: 400px;
+    background: #d9d9d9;
+    border: 3px solid #f6c456;
+    padding: 15px 25px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    z-index: 200;
+    pointer-events: none; /* чтобы клики «сквозь» проходили */
+    transition: top 0.5s ease;
+    justify-items: center;
+}
+
+/* когда нужно показать — поднимаем в видимую зону */
+#inviteModal.show {
+    top: 20px; /* выезжает из-за верха, остаётся на 20px от шапки */
+    pointer-events: all; /* теперь кнопки внутри кликабельны */
+}
+.modal-content {
+    justify-items: center;
+}
+#inviteText {
+    font-size: 24px;
+    color: #04021c;
+    margin-bottom: 15px;
+}
+
+#acceptInvite,
+#declineInvite {
+    font-size: 20px;
+    padding: 8px 20px;
+    margin: 0 10px;
+    clip-path: polygon(12% 0%, 88% 0%, 100% 50%, 88% 100%, 12% 100%, 0% 50%);
+    border: none;
+    cursor: pointer;
+}
+#acceptInvite {
+    background: #722db2;
+    color: #fff;
+}
+#declineInvite {
+    background: #bebebe;
+    color: #04021c;
+}
+
+#acceptInvite:hover,
+#declineInvite:hover {
+    transform: scale(1.05);
+}
+
+/**/
 .modal {
     position: fixed;
     top: 0;
@@ -376,7 +436,7 @@ html {
     z-index: 100;
 }
 
-.modal-content {
+.modal-content-avatar {
     width: 40%;
     background: #1b0f3a;
     padding: 30px;
@@ -384,11 +444,10 @@ html {
     text-align: center;
 }
 
-.modal-content h2 {
+.modal-content-avatar h2 {
     margin-bottom: 20px;
     color: #d9d9d9;
 }
-
 .avatars {
     display: flex;
     flex-wrap: wrap;

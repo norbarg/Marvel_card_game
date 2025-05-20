@@ -66,6 +66,10 @@ io.on('connection', (socket) => {
                 'UPDATE users SET avatar_url = ? WHERE user_id = ?',
                 [avatar_url, userId]
             );
+            // Обновляем на лету в памяти:
+            socket.user.avatar_url = avatar_url;
+
+            // Подтверждаем клиенту
             socket.emit('avatar_updated', { avatar_url });
         } catch (err) {
             console.error('Error when changing avatar:', err);
@@ -76,7 +80,7 @@ io.on('connection', (socket) => {
     });
 
     // Приглашение
-    socket.on('invite', ({ targetNickname }) => {
+    socket.on('invite', async ({ targetNickname }) => {
         const tkey = targetNickname.trim().toLowerCase();
         const targetSocketId = socketsByNickname.get(tkey);
         console.log(
@@ -87,10 +91,15 @@ io.on('connection', (socket) => {
             socket.emit('invite_error', 'User not online');
             return;
         }
+        // подгружаем актуальный аватар текущего юзера
+        const [[{ avatar_url }]] = await dbPool.query(
+            'SELECT avatar_url FROM users WHERE user_id = ?',
+            [socket.user.userId]
+        );
         io.to(targetSocketId).emit('invite_received', {
             fromUserId: userId,
             fromNickname: nickname,
-            fromAvatar: socket.user.avatar_url,
+            fromAvatar: avatar_url,
         });
     });
 
