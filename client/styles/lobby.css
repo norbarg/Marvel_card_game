@@ -107,6 +107,10 @@ html {
     scale: 1.01;
     color: white;
 }
+.back-button.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
 
 /* Input + button внутри */
 .invite-wrapper {
@@ -300,6 +304,12 @@ html {
     scale: 1.01;
     color: white;
 }
+/* когда игрок готов, кнопка перекрашена фиолетом */
+.ready-button.ready-on {
+    background: #722db2;
+    box-shadow: 0 0 0 3px #d9d9d9;
+    color: white;
+}
 
 /* --- 4. ? --- */
 .help-section {
@@ -357,7 +367,7 @@ html {
 /* Doctor Strange + QR */
 .doctor-strange-fixed {
     position: absolute;
-    left: 42%;
+    left: 22%;
     bottom: -5px;
     z-index: 10;
 }
@@ -463,4 +473,97 @@ html {
 
 .avatars img:hover {
     transform: scale(1.1);
+}
+/*draft*/
+/* Скрытый элемент */
+.hidden {
+    display: none !important;
+}
+
+/* Панель драфта справа */
+.draft-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100%; /* подгоните ширину под макет */
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    z-index: 5;
+}
+
+/* Хедер с таймером и счётчиком */
+.draft-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.draft-header .turn-indicator {
+    background: #722db2;
+    width: 200px;
+    font-size: 26px;
+    clip-path: polygon(12% 0%, 88% 0%, 100% 50%, 88% 100%, 12% 100%, 0% 50%);
+    border: none;
+    padding: 0 25px;
+    color: #04021c;
+    text-align: center;
+}
+
+.draft-header .timer {
+    width: 45px;
+    height: 45px;
+    background: #f6c456;
+    font-size: 28px;
+    color: #04021c;
+    clip-path: polygon(50% 3%, 93% 25%, 93% 75%, 50% 97%, 7% 75%, 7% 25%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-sizing: border-box;
+    background-clip: padding-box;
+}
+.draft-header .timer::before {
+    content: '';
+    position: absolute;
+    width: calc(40px);
+    height: calc(40px);
+    background: #d9d9d9;
+    clip-path: polygon(50% 3%, 93% 25%, 93% 75%, 50% 97%, 7% 75%, 7% 25%);
+    z-index: -1;
+}
+.draft-header .picked-count {
+    font-size: 26px;
+    color: #d9d9d9;
+}
+
+/* Сетка карточек: 5 колонок */
+/* Сетка карточек: авто-колонки шириной от 100px без отступов */
+.card-grid {
+    padding: 0 106px;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0;
+}
+
+/* Сами карточки */
+.draft-card {
+    object-fit: cover;
+    display: block; /* чтобы убрать пробелы между inline-элементами */
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.draft-card:hover {
+    transform: scale(1.03);
+}
+
+.draft-card.picked {
+    filter: brightness(50%);
+    pointer-events: none;
 }
