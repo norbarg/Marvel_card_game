@@ -442,9 +442,7 @@ socket.on('draft_complete', () => {
 socket.on('invalid_session', () => {
     console.warn('Session is no longer valid, cleaning up…');
     cleanupLobby();
-    // сбросим флаг, чтобы READY и INVITE снова заработали
+
     inRoom = false;
     sessionId = null;
-    // опционально: перенаправим на стартовую
-    // window.location.href = '/lobby.html';
 });

@@ -23,6 +23,10 @@ app.get('/', (req, res) =>
 app.get('/lobby.html', (req, res) =>
     res.sendFile(path.join(__dirname, '../client/pages/lobby.html'))
 );
+app.get('/game.html', (req, res) =>
+    res.sendFile(path.join(__dirname, '../client/pages/game.html'))
+);
+
 app.use('/auth', authRoutes);
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
@@ -32,6 +36,7 @@ const socketsByUserId = new Map(); // userId   -> socket.id
 const readyMap = new Map(); // sessionId -> Set<userId>
 const sessionPlayers = new Map(); // sessionId → [player1_id, player2_id]
 const sessionDraftData = new Map(); //  sessionId → { cardPool, firstPlayerId }
+const gameStates = new Map();
 
 io.use(async (socket, next) => {
     const token = socket.handshake.auth.token;
@@ -53,6 +58,131 @@ io.use(async (socket, next) => {
         next(new Error('Unauthorized'));
     }
 });
+function endTurn(sessionId, playerId) {
+    const state = gameStates.get(sessionId);
+    if (!state || state.currentTurn !== playerId) return;
+
+    // 1) Сброс таймаута
+    clearTimeout(state.turnTimeout);
+    state.turnTimeout = null;
+
+    // 2) Берём игроков из sessionPlayers
+    const playersArr = sessionPlayers.get(sessionId);
+    if (!playersArr) {
+        console.warn(`No sessionPlayers for session ${sessionId}`);
+        return;
+    }
+    const [p1, p2] = playersArr;
+
+    // 3) Переключаем очередь
+    state.currentTurn = state.currentTurn === p1 ? p2 : p1;
+
+    // 4) Проверяем, оба ли сходили (тогда битва) или просто ход следующего
+    const firstMover = state.round % 2 === 1 ? p1 : p2;
+    if (state.currentTurn === firstMover) {
+        resolveBattle(sessionId);
+    } else {
+        startTurn(sessionId);
+    }
+}
+
+function startTurn(sessionId) {
+    const state = gameStates.get(sessionId);
+    if (!state) return;
+    const turnPlayer = state.currentTurn;
+    // шлём событие startTurn тому, чей ход:
+    const socketId = socketsByUserId.get(turnPlayer);
+    io.to(socketId).emit('yourTurn', {
+        crystals: state.players[turnPlayer].crystals,
+        time: 30,
+    });
+    // остальным – opponentTurn
+    const other = Object.keys(state.players).find((id) => id != turnPlayer);
+    const otherSocketId = socketsByUserId.get(+other);
+    io.to(otherSocketId).emit('opponentTurn', { time: 30 });
+
+    // сбрасываем, если был старый таймаут
+    if (state.turnTimeout) clearTimeout(state.turnTimeout);
+    state.turnTimeout = setTimeout(() => {
+        // если игрок не успел – принудительно заканчиваем ход
+        endTurn(sessionId, turnPlayer);
+    }, 30_000);
+}
+function resolveBattle(sessionId) {
+    const state = gameStates.get(sessionId);
+    const [p1, p2] = sessionPlayers.get(sessionId);
+    const A = state.players[p1],
+        B = state.players[p2];
+    // сначала шлём всем reveal карт
+    io.to(sessionId).emit('revealCards', {
+        [p1]: A.field,
+        [p2]: B.field,
+    });
+    // по каждому из 5 слотов
+    for (let i = 0; i < 5; i++) {
+        let cardA = A.field[i],
+            cardB = B.field[i];
+        if (cardA && cardB) {
+            // бой карт
+            while (cardA && cardB) {
+                cardB.defense -= cardA.attack;
+                if (cardB.defense <= 0) {
+                    const over = -cardB.defense;
+                    B.hp = Math.max(B.hp - over, 0);
+                    B.field[i] = null;
+                    cardB = null;
+                    break;
+                }
+                cardA.defense -= cardB.attack;
+                if (cardA.defense <= 0) {
+                    const over = -cardA.defense;
+                    A.hp = Math.max(A.hp - over, 0);
+                    A.field[i] = null;
+                    cardA = null;
+                    break;
+                }
+            }
+        } else if (cardA && !cardB) {
+            B.hp = Math.max(B.hp - cardA.attack, 0);
+        } else if (!cardA && cardB) {
+            A.hp = Math.max(A.hp - cardB.attack, 0);
+        }
+    }
+
+    // после боя
+    io.to(sessionId).emit('battleResult', {
+        [p1]: { hp: A.hp, field: A.field },
+        [p2]: { hp: B.hp, field: B.field },
+    });
+    // проверяем конец игры
+    if (A.hp <= 0 || B.hp <= 0) {
+        const winner = A.hp > B.hp ? p1 : B.hp > A.hp ? p2 : null;
+        io.to(sessionId).emit('gameOver', { winner });
+        gameStates.delete(sessionId);
+        return;
+    }
+    // иначе – новый раунд
+    state.round++;
+    // +5 кристаллов и сброс поля на руку/доупаковка, добор карт…
+    [p1, p2].forEach((pid) => {
+        const pl = state.players[pid];
+        pl.crystals += 5;
+        // добираем до 5 карт
+        while (pl.hand.length < 5 && pl.deck.length) {
+            pl.hand.push(pl.deck.shift());
+        }
+        // уведомляем каждого о новой руке и ресурсах
+        const sid = socketsByUserId.get(+pid);
+        io.to(sid).emit('newRound', {
+            hand: pl.hand,
+            crystals: pl.crystals,
+            deckSize: pl.deck.length,
+            round: state.round,
+        });
+    });
+    // старт хода нового раунда
+    startTurn(sessionId);
+}
 
 // обрабатываем подключения
 io.on('connection', (socket) => {
@@ -294,8 +424,168 @@ io.on('connection', (socket) => {
             )
             .then((r) => r[0][0].cnt);
         if (totalP1 === 15 && totalP2 === 15) {
+            // 1) переводим сессию в этап "battle"
+            await dbPool.query(
+                'UPDATE sessions SET status = ? WHERE session_id = ?',
+                ['battle', sessionId]
+            );
+
+            // 2) оповещаем клиентов о завершении драфта
             io.to(sessionId).emit('draft_complete');
         }
+    });
+    socket.on('join_game', async ({ sessionId }) => {
+        // 1) проверяем, что сессия в статусе battle
+        const [[sess]] = await dbPool.query(
+            'SELECT status, player1_id, player2_id FROM sessions WHERE session_id = ?',
+            [sessionId]
+        );
+        if (!sess || sess.status !== 'battle') {
+            return socket.emit('invalid_game');
+        }
+        // **1.5) подписываем текущий сокет в комнату**
+        socket.join(sessionId);
+
+        // 2) вытягиваем picks и разделяем на два массива
+        const [rows] = await dbPool.query(
+            `
+            SELECT dc.player_id AS playerId,
+                   c.card_id    AS id,
+                   c.image_url,
+                   c.cost,
+                   c.attack,
+                   c.defense
+            FROM deck_cards dc
+              JOIN cards c ON dc.card_id = c.card_id
+            WHERE dc.session_id = ?
+            ORDER BY dc.pick_order
+          `,
+            [sessionId]
+        );
+        const youId = socket.user.userId;
+        const oppId =
+            sess.player1_id === youId ? sess.player2_id : sess.player1_id;
+        const youCards = rows
+            .filter((r) => r.playerId === youId)
+            .map((r) => ({
+                id: r.id,
+                image_url: r.image_url,
+                cost: r.cost,
+                attack: r.attack,
+                defense: r.defense,
+            }));
+        const oppCards = rows
+            .filter((r) => r.playerId !== youId)
+            .map((r) => ({
+                id: r.id,
+                image_url: r.image_url,
+                cost: r.cost,
+                attack: r.attack,
+                defense: r.defense,
+            }));
+
+        // 3) найдём сокет оппонента (чтобы подхватить его nickname/avatar)
+        const oppSocketId = socketsByUserId.get(oppId);
+        const oppSock = oppSocketId
+            ? io.sockets.sockets.get(oppSocketId)
+            : null;
+
+        // 1.6) и подписываем оппонента (если он на линии) в ту же комнату
+        if (oppSock) {
+            oppSock.join(sessionId);
+        }
+        // 4) Формируем initState и сохраняем
+        const initState = {
+            players: {
+                [youId]: {
+                    hp: 20,
+                    crystals: 8,
+                    deck: youCards.slice(5),
+                    hand: youCards.slice(0, 5),
+                    field: [null, null, null, null, null],
+                },
+                [oppId]: {
+                    hp: 20,
+                    crystals: 8,
+                    deck: oppCards.slice(5),
+                    hand: oppCards.slice(0, 5),
+                    field: [null, null, null, null, null],
+                },
+            },
+            playersInfo: {
+                [youId]: {
+                    nickname: socket.user.nickname,
+                    avatar: socket.user.avatar_url,
+                },
+                [oppId]: {
+                    nickname: oppSock?.user.nickname,
+                    avatar: oppSock?.user.avatar_url,
+                },
+            },
+            currentTurn: Math.random() < 0.5 ? youId : oppId,
+            round: 1,
+            turnTimeout: null,
+        };
+        gameStates.set(sessionId, initState);
+
+        // 5) Вспомогательная функция для отправки
+        function makeInitData(you, opp) {
+            const { players, playersInfo, round, currentTurn } = initState;
+            return {
+                yourHand: players[you].hand,
+                yourHp: players[you].hp,
+                yourCrystals: players[you].crystals,
+                yourDeckSize: players[you].deck.length,
+
+                oppHp: players[opp].hp,
+                oppHandSize: players[opp].hand.length,
+                oppDeckSize: players[opp].deck.length,
+
+                yourNickname: playersInfo[you].nickname,
+                yourAvatar: playersInfo[you].avatar,
+                oppNickname: playersInfo[opp].nickname,
+                oppAvatar: playersInfo[opp].avatar,
+
+                round,
+                firstTurn: currentTurn,
+            };
+        }
+
+        // 6) Отправляем initGame обоим игрокам
+        socket.emit('initGame', makeInitData(youId, oppId));
+        if (oppSock) {
+            oppSock.emit('initGame', makeInitData(oppId, youId));
+        }
+
+        // 7) Запускаем первый ход
+        startTurn(sessionId);
+    });
+
+    socket.on('play_card', ({ sessionId, cardId }) => {
+        const state = gameStates.get(sessionId);
+        if (!state || state.currentTurn !== socket.user.userId) return;
+        const me = state.players[socket.user.userId];
+        const handIdx = me.hand.findIndex((c) => c.id === cardId);
+        if (handIdx < 0 || me.crystals < me.hand[handIdx].cost) return;
+        // снимаем кристаллы и убираем из руки
+        me.crystals -= me.hand[handIdx].cost;
+        const card = me.hand.splice(handIdx, 1)[0];
+        // находим первый свободный слот
+        const slot = me.field.findIndex((f) => f === null);
+        me.field[slot] = { ...card };
+        // И вот это ОЧЕНЬ важно:
+
+        io.to(sessionId).emit('cardPlayed', {
+            by: socket.user.userId,
+            slot,
+            card: { id: card.id, image_url: card.image_url },
+            crystals: me.crystals,
+        });
+    });
+
+    // игрок завершает ход
+    socket.on('end_turn', () => {
+        endTurn(socket.handshake.query.sessionId, socket.user.userId);
     });
 });
 

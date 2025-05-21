@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link
+            rel="shortcut icon"
+            href="../assets/icons/hulk icon.png"
+            type="image/png"
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bevan:ital@0;1&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="/styles/game.css" />
+        <title>Marvel Draft - Game</title>
+    </head>
+    <body>
+        <div id="game-container">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="turn-indicator">
+                    <div class="timer">30</div>
+                    <div class="label">YOUR TURN</div>
+                </div>
+                <div class="opponent-info">
+                    <div class="hand" id="opponent-hand">
+                        <!-- dynamic opponent cards -->
+                    </div>
+                    <div class="avatar">
+                        <div class="meta">
+                            <div class="health bevan-regular-italic">30 PH</div>
+                            <div class="nickname">OpponentName</div>
+                        </div>
+                        <img
+                            class="icon"
+                            src="../assets/icons/dr strange icon.png"
+                            alt="Opponent"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Play Area -->
+            <div class="play-area">
+                <div class="field-top">
+                    <!-- dynamic dropped cards top -->
+                    <div class="dropped-cards" id="dropped-top">
+                        <div class="slot" data-index="0"></div>
+                        <div class="slot" data-index="1"></div>
+                        <div class="slot" data-index="2"></div>
+                        <div class="slot" data-index="3"></div>
+                        <div class="slot" data-index="4"></div>
+                    </div>
+                </div>
+                <div class="field-line"></div>
+                <div class="field-bottom">
+                    <!-- dynamic dropped cards bottom -->
+                    <div class="dropped-cards" id="dropped-bottom">
+                        <div class="slot" data-index="0"></div>
+                        <div class="slot" data-index="1"></div>
+                        <div class="slot" data-index="2"></div>
+                        <div class="slot" data-index="3"></div>
+                        <div class="slot" data-index="4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Bar -->
+            <div class="bottom-bar">
+                <div class="player-info">
+                    <div class="avatar">
+                        <div class="crystal">
+                            <div class="count" id="energy-count">13</div>
+                        </div>
+                        <img
+                            class="icon"
+                            src="../assets/icons/dr strange icon.png"
+                            alt="You"
+                        />
+                    </div>
+                    <div class="meta">
+                        <div class="nickname">YourName</div>
+                        <div class="health bevan-regular-italic">30 PH</div>
+                    </div>
+                </div>
+                <div class="hand" id="player-hand">
+                    <!-- dynamic player cards -->
+                </div>
+                <button class="end-turn bebas-neue-regular">END TURN</button>
+            </div>
+
+            <!-- Deck Count -->
+            <div class="deck-count">
+                <img src="../assets/game/back card.png" alt="Deck" />
+                <div class="count" id="deck-size">6 LEFT</div>
+            </div>
+        </div>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="/js/game.js"></script>
+    </body>
+</html>
