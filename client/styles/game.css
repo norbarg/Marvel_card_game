@@ -338,13 +338,24 @@ html {
     gap: 16px;
 }
 .dropped-cards img {
-    width: 100px;
+    width: 110px;
 }
 .dropped-cards .slot {
     /* пусть размер подстраивается под картинку */
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 100px; /* зато все одинаково */
+    width: 110px; /* зато все одинаково */
     height: auto;
+}
+.field-card {
+    transition: opacity 0.5s ease, filter 0.5s;
+}
+.loser-fade {
+    filter: grayscale(60%) brightness(1.3) saturate(0.3);
+    transition: filter 0.3s;
+}
+.winner-fade {
+    opacity: 0;
+    transition: opacity 0.5s;
 }

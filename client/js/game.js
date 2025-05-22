@@ -20,6 +20,7 @@
     const deckSizeEl = document.getElementById('deck-size');
     let turnTimerInt;
     let isMyTurn = false;
+    let lastRevealFields = null;
 
     socket.on('connect', () => {
         const raw = localStorage.getItem('token').split('.')[1];
@@ -140,6 +141,30 @@
             handEl.appendChild(img);
         });
     }
+    function revealFadeOutLosers() {
+        if (!lastRevealFields) return;
+
+        // "fake" battleResult, вызываем fadeOut анимацию как раньше
+        const youField = lastRevealFields[myId];
+        const oppId = Object.keys(lastRevealFields).find(
+            (pid) => pid !== String(myId)
+        );
+        const oppField = lastRevealFields[oppId];
+
+        // Снимай классы "reveal", чтобы потом CSS-анимация проигравших работала
+        myFieldSlots.forEach((slot, i) => {
+            const img = slot.querySelector('img.field-card');
+            if (img) img.classList.remove('reveal');
+        });
+        oppFieldSlots.forEach((slot, i) => {
+            const img = slot.querySelector('img.field-card');
+            if (img) img.classList.remove('reveal');
+        });
+
+        // "эмулируем" battleResult — на самом деле, сервер через 3 сек сам пришлёт это событие
+        // Можно не делать тут ничего, а просто ждать on('battleResult')
+    }
+
     const fieldBottom = document.querySelector('.field-bottom');
 
     fieldBottom.addEventListener('dragover', (e) => {
@@ -172,44 +197,99 @@
         }
     });
 
-    socket.on('revealCards', (data) => {
-        // data = { [p1]: [...], [p2]: [...] }
-        const otherField = Object.entries(data).find(
-            ([pid]) => pid !== String(myId)
-        )[1];
+    let battleResultPending = null; // чтобы не было повторов
+    let lastRevealTime = 0;
 
+    socket.on('revealCards', (data) => {
+        lastRevealFields = data;
+        lastRevealTime = Date.now();
+
+        // --- ОТКРЫВАЕМ КАРТЫ ЛИЦОМ ---
+        const youField = data[myId];
+        const oppId = Object.keys(data).find((pid) => pid !== String(myId));
+        const oppField = data[oppId];
+
+        myFieldSlots.forEach((slotEl, i) => {
+            slotEl.innerHTML = '';
+            if (youField[i]) {
+                const img = document.createElement('img');
+                img.src = youField[i].image_url;
+                img.classList.add('field-card', 'reveal');
+                slotEl.appendChild(img);
+            }
+        });
         oppFieldSlots.forEach((slotEl, i) => {
             slotEl.innerHTML = '';
-            if (otherField[i]) {
+            if (oppField[i]) {
                 const img = document.createElement('img');
-                img.src = otherField[i].image_url;
-                img.classList.add('field-card');
+                img.src = oppField[i].image_url;
+                img.classList.add('field-card', 'reveal');
                 slotEl.appendChild(img);
             }
         });
     });
 
     socket.on('battleResult', (res) => {
-        // res = { [p1]: {hp, field}, [p2]: {hp, field} }
-        Object.entries(res).forEach(([pid, { hp, field }]) => {
-            const isMe = pid === String(myId);
-            // обновляем HP
-            if (isMe) hpMeEl.textContent = `${hp} PH`;
-            else hpOppEl.textContent = `${hp} PH`;
+        const timeSinceReveal = Date.now() - lastRevealTime;
+        const wait = Math.max(0, 3000 - timeSinceReveal);
 
-            // затираем и рисуем новое поле
-            const slots = isMe ? myFieldSlots : oppFieldSlots;
-            slots.forEach((slotEl, i) => {
-                slotEl.innerHTML = '';
-                if (field[i]) {
-                    const img = document.createElement('img');
-                    img.src = field[i].image_url;
-                    img.classList.add('field-card');
-                    slotEl.appendChild(img);
-                }
+        setTimeout(() => {
+            // 1) Обновляем HP
+            Object.entries(res).forEach(([pid, { hp }]) => {
+                const isMe = pid === String(myId);
+                if (isMe) hpMeEl.textContent = `${hp} PH`;
+                else hpOppEl.textContent = `${hp} PH`;
             });
-        });
+
+            // 2) Анимация проигравших и победителей
+            const oldMy = myFieldSlots.map((s) =>
+                s.querySelector('img.field-card')
+            );
+            const oldOpp = oppFieldSlots.map((s) =>
+                s.querySelector('img.field-card')
+            );
+
+            const youField = res[myId].field;
+            const oppId = Object.keys(res).find((pid) => pid !== String(myId));
+            const oppField = res[oppId].field;
+
+            // Сначала проигравшие — делаем тусклыми и убираем через 1с
+            function fadeOutLosers(oldEls, newField) {
+                oldEls.forEach((oldEl, i) => {
+                    if (!oldEl) return;
+                    if (!newField[i]) {
+                        oldEl.classList.add('loser-fade');
+                        setTimeout(() => oldEl.remove(), 1000);
+                    }
+                });
+            }
+
+            // Потом (через 1с) победители — делаем прозрачными и убираем через еще 1с
+            function fadeOutWinners(oldEls, newField) {
+                oldEls.forEach((oldEl, i) => {
+                    if (!oldEl) return;
+                    if (newField[i]) {
+                        setTimeout(() => {
+                            oldEl.classList.add('winner-fade');
+                            setTimeout(() => oldEl.remove(), 1000);
+                        }, 1000); // Через 1 секунду после анимации проигравших
+                    }
+                });
+            }
+
+            fadeOutLosers(oldMy, youField);
+            fadeOutLosers(oldOpp, oppField);
+            fadeOutWinners(oldMy, youField);
+            fadeOutWinners(oldOpp, oppField);
+
+            // Через 2 секунды всё подчистить (страховка)
+            setTimeout(() => {
+                myFieldSlots.forEach((s) => (s.innerHTML = ''));
+                oppFieldSlots.forEach((s) => (s.innerHTML = ''));
+            }, 2000);
+        }, wait);
     });
+
     // новый раунд: добор карт и ресет кристаллов
     socket.on('newRound', ({ hand, crystals, deckSize, round }) => {
         renderHand(hand);
@@ -226,7 +306,7 @@
     });
 
     endBtn.addEventListener('click', () => {
-        socket.emit('end_turn');
+        socket.emit('end_turn', { sessionId }); // <-- Передаём sessionId!
         endBtn.disabled = true;
     });
 })();

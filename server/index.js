@@ -66,22 +66,19 @@ function endTurn(sessionId, playerId) {
     clearTimeout(state.turnTimeout);
     state.turnTimeout = null;
 
-    // 2) Берём игроков из sessionPlayers
-    const playersArr = sessionPlayers.get(sessionId);
-    if (!playersArr) {
-        console.warn(`No sessionPlayers for session ${sessionId}`);
-        return;
-    }
-    const [p1, p2] = playersArr;
+    // 2) Отметить, что этот игрок сходил в этом раунде
+    if (!state.moves) state.moves = new Set();
+    state.moves.add(playerId);
 
-    // 3) Переключаем очередь
-    state.currentTurn = state.currentTurn === p1 ? p2 : p1;
+    const [p1, p2] = sessionPlayers.get(sessionId);
 
-    // 4) Проверяем, оба ли сходили (тогда битва) или просто ход следующего
-    const firstMover = state.round % 2 === 1 ? p1 : p2;
-    if (state.currentTurn === firstMover) {
+    if (state.moves.size === 2) {
+        // оба сходили — сейчас битва!
+        state.moves.clear(); // очистить для следующего раунда
         resolveBattle(sessionId);
     } else {
+        // только один сходил — переключаем очередь и ждём второго
+        state.currentTurn = playerId === p1 ? p2 : p1;
         startTurn(sessionId);
     }
 }
@@ -111,67 +108,217 @@ function startTurn(sessionId) {
 function resolveBattle(sessionId) {
     const state = gameStates.get(sessionId);
     const [p1, p2] = sessionPlayers.get(sessionId);
-    const A = state.players[p1],
-        B = state.players[p2];
-    // сначала шлём всем reveal карт
+    const A = state.players[p1];
+    const B = state.players[p2];
+
+    // если ни у кого нет карт — просто очищаем поле и переходим к новому раунду
+    if (A.field.every((c) => c === null) && B.field.every((c) => c === null)) {
+        const empty = [null, null, null, null, null];
+        // тут HP не меняются, полей нет
+        io.to(sessionId).emit('battleResult', {
+            [p1]: { hp: A.hp, field: empty },
+            [p2]: { hp: B.hp, field: empty },
+        });
+        // очистим модели полей
+        A.field = empty.slice();
+        B.field = empty.slice();
+        // проверяем, не конец ли игры
+        if (A.hp <= 0 || B.hp <= 0) {
+            const winner = A.hp > B.hp ? p1 : B.hp > A.hp ? p2 : null;
+            io.to(sessionId).emit('gameOver', { winner });
+            gameStates.delete(sessionId);
+            return;
+        }
+        // обычный переход в новый раунд
+        state.round++;
+        [p1, p2].forEach((pid) => {
+            const pl = state.players[pid];
+            pl.crystals += 5;
+            while (pl.hand.length < 5 && pl.deck.length) {
+                pl.hand.push(pl.deck.shift());
+            }
+            io.to(socketsByUserId.get(pid)).emit('newRound', {
+                hand: pl.hand,
+                crystals: pl.crystals,
+                deckSize: pl.deck.length,
+                round: state.round,
+            });
+        });
+        startTurn(sessionId);
+        return;
+    }
+
+    // 1) показываем “открытие” карт
     io.to(sessionId).emit('revealCards', {
         [p1]: A.field,
         [p2]: B.field,
     });
-    // по каждому из 5 слотов
-    for (let i = 0; i < 5; i++) {
-        let cardA = A.field[i],
-            cardB = B.field[i];
-        if (cardA && cardB) {
-            // бой карт
-            while (cardA && cardB) {
-                cardB.defense -= cardA.attack;
-                if (cardB.defense <= 0) {
-                    const over = -cardB.defense;
-                    B.hp = Math.max(B.hp - over, 0);
-                    B.field[i] = null;
-                    cardB = null;
-                    break;
-                }
-                cardA.defense -= cardB.attack;
-                if (cardA.defense <= 0) {
-                    const over = -cardA.defense;
-                    A.hp = Math.max(A.hp - over, 0);
-                    A.field[i] = null;
-                    cardA = null;
-                    break;
+
+    // 2) подготовка очередей — работаем с копиями
+    let queueA = A.field.filter((c) => c).map((c) => ({ ...c }));
+    let queueB = B.field.filter((c) => c).map((c) => ({ ...c }));
+    // поле опустошаем сразу
+    A.field = [];
+    B.field = [];
+
+    let overA = 0; // урон по A от избыточного урона
+    let overB = 0; // урон по B
+
+    // 3) собственно бой с учётом N-в-M
+    // если по обе стороны >1, просто парами попарно по очереди (как было).
+    // Но если с одной стороны — одиночка, а с другой — несколько, переключаемся в «очередной» режим.
+    if (queueA.length === 1 && queueB.length === 1) {
+        const cardA = queueA.shift();
+        const cardB = queueB.shift();
+        let defA = cardA.defense;
+        let defB = cardB.defense;
+        const atkA = cardA.attack;
+        const atkB = cardB.attack;
+
+        // Драка до смерти (цикл)
+        while (defA > 0 && defB > 0) {
+            defA -= atkB;
+            defB -= atkA;
+        }
+
+        if (defA > 0 && defB <= 0) {
+            A.field.push({ ...cardA, defense: defA });
+            overB += Math.abs(defB);
+        } else if (defB > 0 && defA <= 0) {
+            B.field.push({ ...cardB, defense: defB });
+            overA += Math.abs(defA);
+        } else if (defA <= 0 && defB <= 0) {
+            // Оба трупы — разница переливается в игрока
+            if (defA < defB) {
+                overA += defB - defA;
+            } else if (defB < defA) {
+                overB += defA - defB;
+            }
+            // если одинаково — ничья, урон никому
+        }
+    } else if (queueA.length > 1 && queueB.length > 1) {
+        // оставляем вашу старую реализацию «один-на-один» подряд
+        while (queueA.length && queueB.length) {
+            const cardA = queueA.shift();
+            const cardB = queueB.shift();
+            let defA = cardA.defense,
+                defB = cardB.defense;
+            const atkA = cardA.attack,
+                atkB = cardB.attack;
+            while (defA > 0 && defB > 0) {
+                defB -= atkA;
+                defA -= atkB;
+            }
+            if (defA > 0) {
+                A.field.push({ ...cardA, defense: defA });
+                overB += Math.max(0, -defB);
+            } else if (defB > 0) {
+                B.field.push({ ...cardB, defense: defB });
+                overA += Math.max(0, -defA);
+            }
+        }
+        // добиваем лишних
+        queueA.forEach((c) => (overB += c.attack));
+        queueB.forEach((c) => (overA += c.attack));
+    }
+    // если одна сторона не выставила ни одной карты, а другая — выставила,
+    // то весь урон идёт сразу по игроку
+    else if (queueA.length > 0 && queueB.length === 0) {
+        // у A есть карты, у B нет
+        queueA.forEach((c) => (overB += c.attack));
+    } else if (queueB.length > 0 && queueA.length === 0) {
+        // у B есть карты, у A нет
+        queueB.forEach((c) => (overA += c.attack));
+    } else if (
+        (queueA.length === 1 && queueB.length > 1) ||
+        (queueB.length === 1 && queueA.length > 1)
+    ) {
+        const isASolo = queueA.length === 1;
+        let soloCard = { ...(isASolo ? queueA[0] : queueB[0]) };
+        let multi = (isASolo ? queueB : queueA).map((c) => ({ ...c }));
+        const soloOwner = isASolo ? A : B;
+        const multiOwner = isASolo ? B : A;
+
+        // Аккумулируем урон в эти переменные:
+        let overSolo = 0, // урон для soloOwner
+            overMulti = 0; // урон для multiOwner
+
+        while (soloCard.defense > 0 && multi.length > 0) {
+            // Мульти по очереди атакуют одиночку
+            for (let i = 0; i < multi.length; ++i) {
+                soloCard.defense -= multi[i].attack;
+                if (soloCard.defense <= 0) {
+                    overSolo += -soloCard.defense;
+                    break; // всё! остальные не атакуют!
                 }
             }
-        } else if (cardA && !cardB) {
-            B.hp = Math.max(B.hp - cardA.attack, 0);
-        } else if (!cardA && cardB) {
-            A.hp = Math.max(A.hp - cardB.attack, 0);
+            if (soloCard.defense <= 0) break;
+
+            // Одиночка бьёт первого
+            let remainingAtk = soloCard.attack;
+            let idx = 0;
+            while (remainingAtk > 0 && idx < multi.length) {
+                multi[idx].defense -= remainingAtk;
+                if (multi[idx].defense <= 0) {
+                    let overflow = -multi[idx].defense;
+                    multi.splice(idx, 1);
+                    remainingAtk = overflow;
+                } else {
+                    remainingAtk = 0;
+                }
+            }
+            if (remainingAtk > 0) {
+                overMulti += remainingAtk;
+            }
+        }
+
+        // 3) если одиночка выжил — возвращаем его на поле
+        if (soloCard.defense > 0) {
+            soloOwner.field.push(soloCard);
+        }
+
+        // 4) списываем урон по владельцам (записываем в overA и overB)
+        if (isASolo) {
+            overA += overSolo;
+            overB += overMulti;
+        } else {
+            overA += overMulti;
+            overB += overSolo;
         }
     }
 
-    // после боя
+    // 4) списываем over-урон с HP
+    A.hp = Math.max(A.hp - overA, 0);
+    B.hp = Math.max(B.hp - overB, 0);
+
+    // 5) выравниваем длину поля до 5 слотов
+    while (A.field.length < 5) A.field.push(null);
+    while (B.field.length < 5) B.field.push(null);
+
+    // 6) шлём результат всем
     io.to(sessionId).emit('battleResult', {
         [p1]: { hp: A.hp, field: A.field },
         [p2]: { hp: B.hp, field: B.field },
     });
-    // проверяем конец игры
+    // — после боя больше в поле ничего не остаётся
+    A.field = [null, null, null, null, null];
+    B.field = [null, null, null, null, null];
+    // 7) проверяем конец игры
     if (A.hp <= 0 || B.hp <= 0) {
         const winner = A.hp > B.hp ? p1 : B.hp > A.hp ? p2 : null;
         io.to(sessionId).emit('gameOver', { winner });
         gameStates.delete(sessionId);
         return;
     }
-    // иначе – новый раунд
+
+    // 8) новый раунд: апдейтим HP, добор карт, +кристаллы
     state.round++;
-    // +5 кристаллов и сброс поля на руку/доупаковка, добор карт…
     [p1, p2].forEach((pid) => {
         const pl = state.players[pid];
         pl.crystals += 5;
-        // добираем до 5 карт
         while (pl.hand.length < 5 && pl.deck.length) {
             pl.hand.push(pl.deck.shift());
         }
-        // уведомляем каждого о новой руке и ресурсах
         const sid = socketsByUserId.get(+pid);
         io.to(sid).emit('newRound', {
             hand: pl.hand,
@@ -180,7 +327,26 @@ function resolveBattle(sessionId) {
             round: state.round,
         });
     });
-    // старт хода нового раунда
+
+    let bothEmpty =
+        A.hand.length === 0 &&
+        B.hand.length === 0 &&
+        A.deck.length === 0 &&
+        B.deck.length === 0 &&
+        A.field.every((c) => c === null) &&
+        B.field.every((c) => c === null);
+
+    if (bothEmpty) {
+        let winner = null;
+        if (A.hp > B.hp) winner = p1;
+        else if (B.hp > A.hp) winner = p2;
+        // ничья — winner = null
+        io.to(sessionId).emit('gameOver', { winner });
+        gameStates.delete(sessionId);
+        return;
+    }
+
+    // 9) старт хода нового раунда
     startTurn(sessionId);
 }
 
@@ -584,8 +750,8 @@ io.on('connection', (socket) => {
     });
 
     // игрок завершает ход
-    socket.on('end_turn', () => {
-        endTurn(socket.handshake.query.sessionId, socket.user.userId);
+    socket.on('end_turn', ({ sessionId }) => {
+        endTurn(sessionId, socket.user.userId);
     });
 });
 
