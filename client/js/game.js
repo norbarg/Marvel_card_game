@@ -301,6 +301,58 @@
         socket.emit('end_turn', { sessionId }); // <-- Передаём sessionId!
         endBtn.disabled = true;
     });
+
+    socket.on('resumeGame', (state) => {
+        // Твой id — myId, получаем oppId
+        const myState = state.players[myId];
+        const oppId = Object.keys(state.players).find(
+            (id) => id !== String(myId)
+        );
+        const oppState = state.players[oppId];
+
+        hpMeEl.textContent = `${myState.hp} PH`;
+        hpOppEl.textContent = `${oppState.hp} PH`;
+        crystalCountEl.textContent = myState.crystals;
+        deckSizeEl.textContent = `${myState.deck.length} LEFT`;
+
+        renderHand(myState.hand);
+
+        myFieldSlots.forEach((s, i) => {
+            s.innerHTML = '';
+            if (myState.field[i]) {
+                const img = document.createElement('img');
+                img.src = myState.field[i].image_url;
+                img.classList.add('field-card');
+                s.appendChild(img);
+            }
+        });
+        oppFieldSlots.forEach((s, i) => {
+            s.innerHTML = '';
+            if (oppState.field[i]) {
+                const img = document.createElement('img');
+                img.src = '/assets/game/back card.png';
+                img.classList.add('field-card');
+                s.appendChild(img);
+            }
+        });
+
+        // Никнеймы, аватарки
+        document.querySelector('.bottom-bar .nickname').textContent =
+            state.playersInfo[myId].nickname;
+        document.querySelector('.bottom-bar .avatar img.icon').src =
+            state.playersInfo[myId].avatar;
+        document.querySelector('.top-bar .nickname').textContent =
+            state.playersInfo[oppId].nickname;
+        document.querySelector('.top-bar .avatar img.icon').src =
+            state.playersInfo[oppId].avatar;
+
+        if (state.currentTurn === Number(myId)) {
+            startClientTurn(30);
+        } else {
+            waitOppTurn(30);
+        }
+    });
+
     socket.on('gameOver', async ({ winner }) => {
         clearInterval(turnTimerInt);
         // Меняем статус сессии на finished (см. ниже)
@@ -321,5 +373,9 @@
         overlay.onclick = () => {
             window.location.href = '/lobby.html';
         };
+    });
+    socket.on('session_finished', () => {
+        // Можно показывать алерт или сразу редиректить
+        window.location.href = '/lobby.html';
     });
 })();

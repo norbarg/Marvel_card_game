@@ -19,8 +19,7 @@ CREATE TABLE IF NOT EXISTS cards (
   attack      INT             NOT NULL,
   defense     INT             NOT NULL,
   cost        INT             NOT NULL,
-  image_url   VARCHAR(255)    DEFAULT NULL,
-  description TEXT            DEFAULT NULL
+  image_url   VARCHAR(255)    DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 3) Таблица игровых сессий (комнат)
@@ -29,10 +28,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   player1_id INT UNSIGNED NOT NULL,
   player2_id INT UNSIGNED NOT NULL,
   status     ENUM('lobby','draft','battle','finished') NOT NULL,
-  winner_id  INT UNSIGNED     DEFAULT NULL,
   FOREIGN KEY (player1_id) REFERENCES users(user_id) ON DELETE CASCADE,
-  FOREIGN KEY (player2_id) REFERENCES users(user_id) ON DELETE CASCADE,
-  FOREIGN KEY (winner_id)  REFERENCES users(user_id) ON DELETE SET NULL
+  FOREIGN KEY (player2_id) REFERENCES users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 4) Таблица для хранения выбора карт (драфта) в каждой сессии

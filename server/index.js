@@ -91,6 +91,30 @@ function endTurn(sessionId, playerId) {
         startTurn(sessionId);
     }
 }
+function makeResumeData(state, myId) {
+    const oppId = Object.keys(state.players).find((id) => id != myId);
+    return {
+        players: {
+            [myId]: {
+                hp: state.players[myId].hp,
+                crystals: state.players[myId].crystals,
+                deck: state.players[myId].deck,
+                hand: state.players[myId].hand,
+                field: state.players[myId].field,
+            },
+            [oppId]: {
+                hp: state.players[oppId].hp,
+                crystals: state.players[oppId].crystals,
+                deck: state.players[oppId].deck.length, // Можно только длину!
+                hand: state.players[oppId].hand.length, // Можно только длину!
+                field: state.players[oppId].field,
+            },
+        },
+        playersInfo: state.playersInfo,
+        currentTurn: state.currentTurn,
+        round: state.round,
+    };
+}
 
 function startTurn(sessionId) {
     const state = gameStates.get(sessionId);
@@ -123,6 +147,13 @@ function resolveBattle(sessionId) {
     // если ни у кого нет карт — просто очищаем поле и переходим к новому раунду
     if (A.field.every((c) => c === null) && B.field.every((c) => c === null)) {
         const empty = [null, null, null, null, null];
+        // 5) выравниваем длину поля до 5 слотов (ОБЯЗАТЕЛЬНО перед emit!)
+        while (A.field.length < 5) A.field.push(null);
+        while (B.field.length < 5) B.field.push(null);
+        // и если вдруг полей больше — обрезать:
+        A.field = A.field.slice(0, 5);
+        B.field = B.field.slice(0, 5);
+
         // тут HP не меняются, полей нет
         io.to(sessionId).emit('battleResult', {
             [p1]: { hp: A.hp, field: empty },
@@ -610,6 +641,32 @@ io.on('connection', (socket) => {
         }
     });
     socket.on('join_game', async ({ sessionId }) => {
+        if (!gameStates.has(sessionId)) {
+            // Проверяем, не завершена ли сессия — ищем в БД!
+            const [[sess]] = await dbPool.query(
+                'SELECT status FROM sessions WHERE session_id = ?',
+                [sessionId]
+            );
+            if (!sess || sess.status === 'finished') {
+                return socket.emit('session_finished');
+            }
+        }
+
+        // ПОДПИШЕМ socket на комнату даже если уже был!
+        socket.join(sessionId);
+
+        // Перезапишем socket.id в Map (на всякий!)
+        socketsByUserId.set(socket.user.userId, socket.id);
+        socketsByNickname.set(socket.user.nickname.toLowerCase(), socket.id);
+        // Проверка: есть ли уже состояние игры для этого sessionId
+        if (gameStates.has(sessionId)) {
+            socket.emit(
+                'resumeGame',
+                makeResumeData(gameStates.get(sessionId), socket.user.userId)
+            );
+            return;
+        }
+
         // 1) проверяем, что сессия в статусе battle
         const [[sess]] = await dbPool.query(
             'SELECT status, player1_id, player2_id FROM sessions WHERE session_id = ?',
@@ -665,11 +722,21 @@ io.on('connection', (socket) => {
             ? io.sockets.sockets.get(oppSocketId)
             : null;
 
-        // 1.6) и подписываем оппонента (если он на линии) в ту же комнату
-        if (oppSock) {
-            oppSock.join(sessionId);
+        // Готовим безопасно!
+        let oppNickname = 'Opponent';
+        let oppAvatar = '/assets/game/default_avatar.png';
+        if (oppSock && oppSock.user) {
+            oppNickname = oppSock.user.nickname;
+            oppAvatar = oppSock.user.avatar_url;
+        } else {
+            const [[{ nickname, avatar_url } = {}]] = await dbPool.query(
+                'SELECT nickname, avatar_url FROM users WHERE user_id = ?',
+                [oppId]
+            );
+            if (nickname) oppNickname = nickname;
+            if (avatar_url) oppAvatar = avatar_url;
         }
-        // 4) Формируем initState и сохраняем
+
         const initState = {
             players: {
                 [youId]: {
@@ -693,14 +760,15 @@ io.on('connection', (socket) => {
                     avatar: socket.user.avatar_url,
                 },
                 [oppId]: {
-                    nickname: oppSock?.user.nickname,
-                    avatar: oppSock?.user.avatar_url,
+                    nickname: oppNickname,
+                    avatar: oppAvatar,
                 },
             },
             currentTurn: Math.random() < 0.5 ? youId : oppId,
             round: 1,
             turnTimeout: null,
         };
+
         gameStates.set(sessionId, initState);
 
         // 5) Вспомогательная функция для отправки
@@ -725,10 +793,16 @@ io.on('connection', (socket) => {
                 firstTurn: currentTurn,
             };
         }
+        const safeData = makeInitData(youId, oppId);
+        // console.dir(safeData, { depth: 10 });
+        try {
+            JSON.stringify(safeData);
+        } catch (e) {
+            console.error('Cannot stringify safeData!', e);
+        }
+        socket.emit('initGame', safeData);
 
-        // 6) Отправляем initGame обоим игрокам
-        socket.emit('initGame', makeInitData(youId, oppId));
-        if (oppSock) {
+        if (oppSock && oppSock.connected) {
             oppSock.emit('initGame', makeInitData(oppId, youId));
         }
 
