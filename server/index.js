@@ -29,6 +29,15 @@ app.get('/game.html', (req, res) =>
 
 app.use('/auth', authRoutes);
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.post('/finish_session', async (req, res) => {
+    const { sessionId } = req.body;
+    if (!sessionId) return res.status(400).json({ error: 'No sessionId' });
+    await dbPool.query('UPDATE sessions SET status = ? WHERE session_id = ?', [
+        'finished',
+        sessionId,
+    ]);
+    res.json({ ok: true });
+});
 
 // мапы для быстрого поиска по нику и по userId
 const socketsByNickname = new Map(); // nickname -> socket.id

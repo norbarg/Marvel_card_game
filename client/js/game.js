@@ -297,16 +297,29 @@
         deckSizeEl.textContent = `${deckSize} LEFT`;
     });
 
-    // конец игры
-    socket.on('gameOver', ({ winner }) => {
-        clearInterval(turnTimerInt);
-        const win = winner === myId;
-        alert(win ? 'You win!' : 'You lose...');
-        window.location.href = '/lobby.html';
-    });
-
     endBtn.addEventListener('click', () => {
         socket.emit('end_turn', { sessionId }); // <-- Передаём sessionId!
         endBtn.disabled = true;
+    });
+    socket.on('gameOver', async ({ winner }) => {
+        clearInterval(turnTimerInt);
+        // Меняем статус сессии на finished (см. ниже)
+        await fetch('/finish_session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId }),
+        });
+
+        const win = winner === myId;
+        // Показываем оверлей
+        const overlay = document.getElementById('game-over-overlay');
+        const img = overlay.querySelector('.game-over-img');
+        img.src = win ? '/assets/game/victory.png' : '/assets/game/defeat.png';
+        overlay.style.display = 'flex';
+
+        // Возврат по клику
+        overlay.onclick = () => {
+            window.location.href = '/lobby.html';
+        };
     });
 })();

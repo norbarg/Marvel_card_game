@@ -359,3 +359,24 @@ html {
     opacity: 0;
     transition: opacity 0.5s;
 }
+#game-over-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.game-over-bg {
+    position: absolute;
+    inset: 0;
+    background: rgba(22, 9, 60, 0.8);
+    z-index: 1;
+}
+.game-over-img {
+    position: relative;
+    z-index: 2;
+    width: 420px;
+    max-width: 80vw;
+    max-height: 80vh;
+}
