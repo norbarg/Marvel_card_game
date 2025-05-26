@@ -32,6 +32,8 @@ const inviteTextEl = document.getElementById('inviteText');
 const acceptBtn = document.getElementById('acceptInvite');
 const declineBtn = document.getElementById('declineInvite');
 let pendingInvite = null; // { fromUserId, fromNickname }
+let isMyTurn = false;
+let draftTimer = null;
 
 // Читаем из localStorage, если были
 let sessionId = localStorage.getItem('sessionId');
@@ -85,9 +87,15 @@ function cleanupLobby() {
     localStorage.removeItem('sessionId');
     localStorage.removeItem('opponent');
 }
+function disableBackButton() {
+    backBtn.disabled = true;
+    backBtn.classList.add('disabled'); // для CSS-стилей, если нужно
+}
 
 // BACK-кнопка
 backBtn.addEventListener('click', () => {
+    if (backBtn.disabled) return;
+
     if (inRoom && sessionId) {
         socket.emit('leave_room', { sessionId });
         cleanupLobby(); // <-- Ваша функция, сбрасывающая UI (очистить oppHex, oppNickEl, скрыть драфт-сетку)
@@ -136,19 +144,10 @@ avatarOptions.forEach((img) => {
     });
 });
 
-window.addEventListener('click', (e) => {
-    if (e.target === modal) {
-        modal.style.display = 'none';
-    }
-});
-
 // Добавляем обработчик на клик по пустому аватару
 emptyAvatar.addEventListener('click', () => {
     inviteInput.focus();
 });
-// function showDraftGrid() {
-//   // здесь позже отрисуем драфтовую сетку
-// }
 
 // К нам пришло приглашение — открываем модал
 socket.on('invite_received', ({ fromUserId, fromNickname, fromAvatar }) => {
@@ -168,26 +167,18 @@ acceptBtn.addEventListener('click', () => {
     // сообщаем серверу
     socket.emit('invite_response', { fromUserId, accept: true });
 
-    // сразу обновляем своё состояние
-    sessionId = `battle_${fromUserId}_${myUserId}`;
-    inRoom = true;
-
-    // обновляем UI
+    // сразу же показываем оппонента и сохраняем его, как у того, кто приглашал
+    currentOpponent = {
+        userId: fromUserId,
+        nickname: fromNickname,
+        avatar: fromAvatar,
+    };
+    localStorage.setItem('opponent', JSON.stringify(currentOpponent));
     oppHex.src = fromAvatar;
     oppNickEl.textContent = fromNickname;
+    // разблокируем READY
     readyBtn.disabled = false;
     readyBtn.classList.add('enabled');
-
-    // сохраняем, чтобы пережить перезагрузку
-    localStorage.setItem('sessionId', sessionId);
-    localStorage.setItem(
-        'opponent',
-        JSON.stringify({
-            userId: fromUserId,
-            nickname: fromNickname,
-            avatar: fromAvatar,
-        })
-    );
 
     // прячем модал и сбрасываем pending
     inviteModal.classList.remove('show');
@@ -212,6 +203,9 @@ declineBtn.addEventListener('click', () => {
 
 // Клик вне модала — закрыть
 window.addEventListener('click', (e) => {
+    if (e.target === modal) {
+        modal.style.display = 'none';
+    }
     if (e.target === inviteModal) {
         inviteModal.classList.remove('show');
         cleanupLobby();
@@ -224,31 +218,36 @@ window.addEventListener('click', (e) => {
 });
 
 // Ответ на наше приглашение
+// 1) Обработка ответа
 socket.on(
     'invite_response',
     ({ fromUserId, fromNickname, fromAvatar, accept }) => {
         inviteBtn.textContent = 'INVITE';
-        if (accept) {
-            oppHex.src = fromAvatar;
-            oppNickEl.textContent = fromNickname;
-            readyBtn.disabled = false;
-            readyBtn.classList.add('enabled');
-            sessionId = `battle_${fromUserId}_${myUserId}`;
-            inRoom = true;
-            // сохраняем, чтобы пережить перезагрузку
-            localStorage.setItem('sessionId', sessionId);
-            // Сохраняем данные оппонента
-            localStorage.setItem(
-                'opponent',
-                JSON.stringify({
-                    userId: fromUserId,
-                    nickname: fromNickname,
-                    avatar: fromAvatar,
-                })
-            );
-        }
+        if (!accept) return;
+        // запомним оппонента и сохраним в localStorage
+        currentOpponent = {
+            userId: fromUserId,
+            nickname: fromNickname,
+            avatar: fromAvatar,
+        };
+        localStorage.setItem('opponent', JSON.stringify(currentOpponent));
+        oppHex.src = fromAvatar;
+        oppNickEl.textContent = fromNickname;
+        // НЕ сохраняем sessionId — ждём session_joined
     }
 );
+
+// 2) Получили канонический числовой ключ комнаты
+socket.on('session_joined', ({ sessionId: sid }) => {
+    sessionId = sid;
+    inRoom = true;
+    // теперь точно записываем в localStorage
+    localStorage.setItem('sessionId', sessionId);
+    // разблокируем READY
+    readyBtn.disabled = false;
+    readyBtn.classList.add('enabled');
+});
+
 // Когда оппонент вышел
 socket.on('opponent_left', ({ userId }) => {
     cleanupLobby();
@@ -257,10 +256,193 @@ socket.on('opponent_left', ({ userId }) => {
     localStorage.removeItem('sessionId');
 });
 
-// Вместо window.location.href в start_draft:
-socket.on('start_draft', ({ sessionId: sid }) => {
+let amReady = false;
+
+// 1) Клик по READY
+readyBtn.addEventListener('click', () => {
+    if (!inRoom || amReady) return;
+
+    amReady = true;
+    readyBtn.disabled = true;
+    readyBtn.classList.add('ready-on'); // перекрасим стили
+
+    // говорим серверу, что готовы
+    socket.emit('player_ready', { sessionId });
+});
+function startDraftTimer() {
+    clearInterval(draftTimer);
+    const timerEl = document.querySelector('.timer');
+    let time = 30;
+    timerEl.textContent = time;
+    draftTimer = setInterval(() => {
+        time -= 1;
+        timerEl.textContent = time;
+        if (time <= 0) {
+            clearInterval(draftTimer);
+            if (isMyTurn) autoPick();
+        }
+    }, 1000);
+}
+
+function autoPick() {
+    // Ищем только картинки
+    const cards = [...document.querySelectorAll('.draft-card:not(.picked)')];
+    if (!cards.length) return;
+
+    // Случайно выбираем одну
+    const choice = cards[Math.floor(Math.random() * cards.length)];
+    const pickedId = Number(choice.dataset.id);
+
+    // Локально отмечаем ход
+    isMyTurn = false;
+    document.querySelector('.turn-indicator').textContent = 'OPPONENT TURN';
+    clearInterval(draftTimer);
+
+    // Помечаем её отмеченной
+    choice.classList.add('picked');
+
+    // И шлём на сервер
+    console.log('auto emitting draft_pick', pickedId);
+    socket.emit('draft_pick', { sessionId, cardId: pickedId });
+}
+
+socket.on('start_draft', ({ sessionId: sid, cardPool, firstPlayerId }) => {
+    console.log('start_draft for', nickname, 'sessionId=', sid);
+
     sessionId = sid;
-    inRoom = true;
-    localStorage.setItem('sessionId', sessionId);
-    //   showDraftGrid();
+    showDraftPanel(cardPool);
+    disableBackButton();
+    // выставляем ход:
+    isMyTurn = myUserId === firstPlayerId;
+    document.querySelector('.turn-indicator').textContent = isMyTurn
+        ? 'YOUR TURN'
+        : 'OPPONENT TURN';
+
+    startDraftTimer();
+});
+
+/**
+ * @param {Array} cardPool — массив объектов { id, name, image_url, cost, attack, defense }
+ */
+function showDraftPanel(cardPool) {
+    const panel = document.querySelector('.draft-panel');
+    const grid = panel.querySelector('.card-grid');
+    const countEl = panel.querySelector('.picked-count');
+    const turnEl = panel.querySelector('.turn-indicator');
+    const timerEl = panel.querySelector('.timer');
+
+    // Сброс UI
+    grid.innerHTML = '';
+    countEl.textContent = '0/15';
+    turnEl.textContent = 'YOUR TURN';
+    timerEl.textContent = '30';
+
+    cardPool.forEach((card) => {
+        // создаём <img>
+        const img = document.createElement('img');
+        img.classList.add('draft-card');
+        img.dataset.id = card.id;
+        img.src = card.image_url;
+        img.alt = card.name;
+
+        img.addEventListener('click', () => {
+            if (!isMyTurn || img.classList.contains('picked')) return;
+
+            // локально блокируем ход
+            isMyTurn = false;
+            document.querySelector('.turn-indicator').textContent =
+                'OPPONENT TURN';
+            clearInterval(draftTimer);
+
+            // отмечаем как выбранную
+            img.classList.add('picked');
+
+            socket.emit('draft_pick', {
+                sessionId,
+                cardId: Number(img.dataset.id),
+            });
+        });
+
+        grid.appendChild(img);
+    });
+
+    panel.classList.remove('hidden');
+}
+
+socket.on('draft_update', ({ pickedBy, cardId, nextPlayerId }) => {
+    console.log('[draft_update]', {
+        pickedBy,
+        cardId,
+        nextPlayerId,
+        myUserId,
+        isMyTurn,
+    });
+
+    // 1) помечаем на обоих
+    const img = document.querySelector(`.draft-card[data-id="${cardId}"]`);
+    console.log('→ found img?', img);
+    if (img) img.classList.add('picked');
+
+    // 2) обновляем счётчик:
+    const countEl = document.querySelector('.picked-count');
+    const current =
+        +countEl.textContent.split('/')[0] + (pickedBy === myUserId ? 1 : 0);
+    countEl.textContent = `${current}/15`;
+
+    // 3) чей ход
+    isMyTurn = nextPlayerId === myUserId;
+    document.querySelector('.turn-indicator').textContent = isMyTurn
+        ? 'YOUR TURN'
+        : 'OPPONENT TURN';
+
+    // 4) обязательно перезапускаем таймер
+    clearInterval(draftTimer);
+    startDraftTimer();
+});
+
+/**
+ * Восстановление драфта после перезагрузки
+ */
+socket.on(
+    'resume_draft',
+    ({ sessionId: sid, cardPool, firstPlayerId, picks, nextPlayerId }) => {
+        sessionId = sid;
+        showDraftPanel(cardPool);
+        disableBackButton();
+
+        // Промаркируем уже выбранные карты
+        picks.forEach(({ pickedBy, cardId }) => {
+            const img = document.querySelector(
+                `.draft-card[data-id="${cardId}"]`
+            );
+            if (img) img.classList.add('picked');
+        });
+
+        // Обновим счётчик «моих» picks
+        const myCount = picks.filter((p) => p.pickedBy === myUserId).length;
+        document.querySelector('.picked-count').textContent = `${myCount}/15`;
+
+        // Чей ход
+        isMyTurn = nextPlayerId === myUserId;
+        document.querySelector('.turn-indicator').textContent = isMyTurn
+            ? 'YOUR TURN'
+            : 'OPPONENT TURN';
+
+        // Запускаем таймер
+        startDraftTimer();
+    }
+);
+
+socket.on('draft_complete', () => {
+    clearInterval(draftTimer);
+    // перенаправляем на страницу игры
+    window.location.href = '/game.html';
+});
+// если сервер посылает, что сессия невалидна — чистим и уходим в корень
+socket.on('invalid_session', () => {
+    console.warn('Session is no longer valid, cleaning up…');
+    cleanupLobby();
+
+    inRoom = false;
+    sessionId = null;
 });
