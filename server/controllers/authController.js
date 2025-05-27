@@ -1,4 +1,3 @@
-// server/controllers/authController.js
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../config/db');
@@ -30,7 +29,6 @@ async function register(req, res) {
         );
         const userId = result.insertId;
 
-        // После вставки достаем дефолтный avatar_url
         const [[{ avatar_url }]] = await db.query(
             'SELECT avatar_url FROM users WHERE user_id = ?',
             [userId]

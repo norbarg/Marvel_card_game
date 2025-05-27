@@ -168,10 +168,9 @@ button:hover {
     display: none;
 }
 
-/* контейнер ошибки */
 #auth-error {
     position: fixed;
-    bottom: -60px; /* изначально за экраном */
+    bottom: -60px;
     left: 50%;
     transform: translateX(-50%);
 
@@ -207,7 +206,6 @@ button:hover {
     transition: color 0.3s ease;
     z-index: -1;
 }
-/* класс для показа ошибки */
 #auth-error.show {
-    bottom: 30px; /* зона видимости над формой */
+    bottom: 30px;
 }

@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <title>Marvel Lobby</title>
+        <title>Marvel Cards - Lobby</title>
         <link
             rel="shortcut icon"
             href="../assets/icons/hulk icon.png"
@@ -18,14 +18,12 @@
     </head>
     <body>
         <div class="lobby-wrapper">
-            <!-- Левая часть -->
             <div class="lobby-left">
                 <img
                     src="../assets/lobby/left side.png"
                     alt="Texture"
                     class="left-texture"
                 />
-                <!-- 1. Верх: кнопка назад + инпут с кнопкой -->
                 <div class="top-controls">
                     <button class="back-button bebas-neue-regular">BACK</button>
                     <div class="invite-wrapper">
@@ -40,7 +38,6 @@
                     </div>
                 </div>
 
-                <!-- 2. Игроки и VS -->
                 <div class="players-section">
                     <div class="player player-1">
                         <div class="avatar hex you">
@@ -67,26 +64,22 @@
                     </div>
                 </div>
 
-                <!-- 3. Кнопка READY -->
                 <div class="ready-section">
                     <button class="ready-button bebas-neue-regular">
                         READY
                     </button>
                 </div>
 
-                <!-- 4. Вопрос -->
                 <div class="help-section">
                     <button class="help-button bebas-neue-regular">?</button>
                 </div>
             </div>
 
-            <!-- Правая часть: фоновое изображение -->
             <div class="lobby-right">
                 <img
                     src="../assets/lobby/right side.png"
                     alt="Marvel Background"
                 />
-                <!-- DRAFT PANEL (по умолчанию скрыта) -->
                 <div class="hidden draft-panel">
                     <div class="draft-header">
                         <div class="turn-indicator bebas-neue-regular">
@@ -95,13 +88,10 @@
                         <div class="timer bebas-neue-regular">30</div>
                         <div class="picked-count bebas-neue-regular">0/15</div>
                     </div>
-                    <div class="card-grid">
-                        <!-- карточки подставятся динамически -->
-                    </div>
+                    <div class="card-grid"></div>
                 </div>
             </div>
 
-            <!-- Doctor Strange + QR — фиксированная -->
             <div class="doctor-strange-fixed">
                 <img
                     src="../assets/lobby/qr code.png"
@@ -152,6 +142,18 @@
                 </button>
             </div>
         </div>
+        <div id="helpModal" class="help-modal">
+            <button
+                class="help-modal-close bebas-neue-regular"
+                id="helpModalCloseBtn"
+            >
+                ✕
+            </button>
+            <div class="help-modal-content">
+                <img src="../assets/lobby/rules.png" alt="Game Rules" />
+            </div>
+        </div>
+
         <script src="/socket.io/socket.io.js"></script>
         <script src="../js/lobby.js"></script>
     </body>

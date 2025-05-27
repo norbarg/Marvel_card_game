@@ -1,31 +1,24 @@
-// client/js/registration.js
-
 const signInTab = document.getElementById('sign-in-tab');
 const signUpTab = document.getElementById('sign-up-tab');
 const confirmGroup = document.getElementById('confirm-group');
 const enterBtn = document.querySelector('.enter-btn');
-
 const nicknameEl = document.getElementById('nickname');
 const passwordEl = document.getElementById('password');
 const confirmPasswordEl = document.getElementById('confirm-password');
 
-// Создаём и настраиваем контейнер для ошибок
 const errorEl = document.createElement('div');
 errorEl.id = 'auth-error';
 document.body.appendChild(errorEl);
 
-// Функция для показа сообщения об ошибке
 function showError(message) {
     errorEl.textContent = message;
     errorEl.classList.add('show');
 
-    // Через 3 секунды скрыть
     setTimeout(() => {
         errorEl.classList.remove('show');
     }, 3000);
 }
 
-// Переключение табов
 signInTab.addEventListener('click', () => {
     signInTab.classList.add('active');
     signUpTab.classList.remove('active');
@@ -40,8 +33,7 @@ signUpTab.addEventListener('click', () => {
     enterBtn.textContent = 'ENTER';
 });
 
-// Базовый URL API
-const API_BASE = ''; // если фронт и бэк на одном хосте
+const API_BASE = '';
 
 enterBtn.addEventListener('click', async () => {
     const nickname = nicknameEl.value.trim();
@@ -71,7 +63,6 @@ enterBtn.addEventListener('click', async () => {
             return;
         }
 
-        // Сохраняем токен, ник и аватар
         localStorage.setItem('token', result.token);
         localStorage.setItem('nickname', result.user.nickname);
         localStorage.setItem('avatar', result.user.avatar_url);

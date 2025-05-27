@@ -1,9 +1,14 @@
--- db/schema.sql
-CREATE DATABASE IF NOT EXISTS marvel_cards 
+CREATE DATABASE IF NOT EXISTS marvel_cards; 
+CREATE USER IF NOT EXISTS 'norbarg'@'localhost'
+  IDENTIFIED BY 'securepass';
+
+GRANT ALL PRIVILEGES ON marvel_cards.* TO 'norbarg'@'localhost';
+
+FLUSH PRIVILEGES;
+
 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE marvel_cards;
 
--- 1) Таблица пользователей
 CREATE TABLE IF NOT EXISTS users (
   user_id       INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   nickname      VARCHAR(32)       NOT NULL UNIQUE,
@@ -12,7 +17,6 @@ CREATE TABLE IF NOT EXISTS users (
     DEFAULT '/assets/icons/dr strange icon.png'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 2) Таблица карт
 CREATE TABLE IF NOT EXISTS cards (
   card_id     INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name        VARCHAR(100)    NOT NULL UNIQUE,
@@ -22,7 +26,6 @@ CREATE TABLE IF NOT EXISTS cards (
   image_url   VARCHAR(255)    DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 3) Таблица игровых сессий (комнат)
 CREATE TABLE IF NOT EXISTS sessions (
   session_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   player1_id INT UNSIGNED NOT NULL,
@@ -32,7 +35,6 @@ CREATE TABLE IF NOT EXISTS sessions (
   FOREIGN KEY (player2_id) REFERENCES users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 4) Таблица для хранения выбора карт (драфта) в каждой сессии
 CREATE TABLE IF NOT EXISTS deck_cards (
   session_id INT UNSIGNED NOT NULL,
   player_id  INT UNSIGNED NOT NULL,

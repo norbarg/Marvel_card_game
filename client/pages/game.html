@@ -15,20 +15,17 @@
             rel="stylesheet"
         />
         <link rel="stylesheet" href="/styles/game.css" />
-        <title>Marvel Draft - Game</title>
+        <title>Marvel Cards - Game</title>
     </head>
     <body>
         <div id="game-container">
-            <!-- Top Bar -->
             <div class="top-bar">
                 <div class="turn-indicator">
                     <div class="timer">30</div>
                     <div class="label">YOUR TURN</div>
                 </div>
                 <div class="opponent-info">
-                    <div class="hand" id="opponent-hand">
-                        <!-- dynamic opponent cards -->
-                    </div>
+                    <div class="hand" id="opponent-hand"></div>
                     <div class="avatar">
                         <div class="meta">
                             <div class="health bevan-regular-italic">30 PH</div>
@@ -43,10 +40,8 @@
                 </div>
             </div>
 
-            <!-- Play Area -->
             <div class="play-area">
                 <div class="field-top">
-                    <!-- dynamic dropped cards top -->
                     <div class="dropped-cards" id="dropped-top">
                         <div class="slot" data-index="0"></div>
                         <div class="slot" data-index="1"></div>
@@ -57,7 +52,6 @@
                 </div>
                 <div class="field-line"></div>
                 <div class="field-bottom">
-                    <!-- dynamic dropped cards bottom -->
                     <div class="dropped-cards" id="dropped-bottom">
                         <div class="slot" data-index="0"></div>
                         <div class="slot" data-index="1"></div>
@@ -68,7 +62,6 @@
                 </div>
             </div>
 
-            <!-- Bottom Bar -->
             <div class="bottom-bar">
                 <div class="player-info">
                     <div class="avatar">
@@ -86,13 +79,9 @@
                         <div class="health bevan-regular-italic">30 PH</div>
                     </div>
                 </div>
-                <div class="hand" id="player-hand">
-                    <!-- dynamic player cards -->
-                </div>
+                <div class="hand" id="player-hand"></div>
                 <button class="end-turn bebas-neue-regular">END TURN</button>
             </div>
-
-            <!-- Deck Count -->
             <div class="deck-count">
                 <img src="../assets/game/back card.png" alt="Deck" />
                 <div class="count" id="deck-size">6 LEFT</div>

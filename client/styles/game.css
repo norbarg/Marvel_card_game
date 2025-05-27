@@ -1,4 +1,3 @@
-/* Common reset */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -31,7 +30,6 @@ html {
         center/cover;
 }
 
-/* Top bar */
 .top-bar {
     position: absolute;
     top: 0;
@@ -178,7 +176,6 @@ html {
     width: 160px;
     height: auto;
 }
-/* Middle play area */
 .play-area {
     position: absolute;
     top: 173px;
@@ -189,11 +186,9 @@ html {
     grid-template-rows: 1fr auto 1fr;
 }
 .field-top {
-    /* background-color: #f6c456; */
     position: relative;
 }
 .field-bottom {
-    /* background-color: #722db2; */
     position: relative;
 }
 .field-line {
@@ -202,7 +197,6 @@ html {
     background: transparent;
 }
 
-/* Bottom bar */
 .bottom-bar {
     position: absolute;
     bottom: 0;
@@ -226,17 +220,12 @@ html {
     position: absolute;
     bottom: -16px;
     left: 5px;
-    /* Подбираем удобный размер бейджа */
     width: 65px;
     height: 65px;
-
-    /* Точка сдвига и отображение фона */
     background-image: url('../assets/game/crystal.png');
     background-repeat: no-repeat;
     background-position: center;
-    background-size: contain; /* или cover, в зависимости от исходника */
-
-    /* Если нужно текст над картинкой — просто увеличьте z-index */
+    background-size: contain;
     z-index: 1;
 }
 .crystal .count {
@@ -281,8 +270,8 @@ html {
     margin-right: 30px;
 }
 .end-turn.enabled {
-    background-color: #d9d9d9; /* цвет текста */
-    box-shadow: 0 0 0 3px #4b1b78; /* рамка делаем светлее */
+    background-color: #d9d9d9;
+    box-shadow: 0 0 0 3px #4b1b78;
 }
 .enabled.end-turn::before {
     content: '';
@@ -306,7 +295,6 @@ html {
     color: white;
 }
 
-/* Deck count */
 .deck-count {
     position: absolute;
     right: 50px;
@@ -326,7 +314,6 @@ html {
 }
 
 .field-bottom.drag-highlight {
-    /* слегка голубой полупрозрачный фон */
     background-color: rgba(0, 120, 255, 0.15);
 }
 .dropped-cards {
@@ -341,11 +328,10 @@ html {
     width: 110px;
 }
 .dropped-cards .slot {
-    /* пусть размер подстраивается под картинку */
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 110px; /* зато все одинаково */
+    width: 110px;
     height: auto;
 }
 .field-card {
