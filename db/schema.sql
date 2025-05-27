@@ -1,4 +1,6 @@
-CREATE DATABASE IF NOT EXISTS marvel_cards; 
+CREATE DATABASE IF NOT EXISTS marvel_cards
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
 CREATE USER IF NOT EXISTS 'norbarg'@'localhost'
   IDENTIFIED BY 'securepass';
 
@@ -6,7 +8,6 @@ GRANT ALL PRIVILEGES ON marvel_cards.* TO 'norbarg'@'localhost';
 
 FLUSH PRIVILEGES;
 
-CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE marvel_cards;
 
 CREATE TABLE IF NOT EXISTS users (
