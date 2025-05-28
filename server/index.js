@@ -63,6 +63,14 @@ io.use(async (socket, next) => {
         next(new Error('Unauthorized'));
     }
 });
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
 function endTurn(sessionId, playerId) {
     const state = gameStates.get(sessionId);
     if (!state || state.currentTurn !== playerId) return;
@@ -607,24 +615,28 @@ io.on('connection', (socket) => {
         const youId = socket.user.userId;
         const oppId =
             sess.player1_id === youId ? sess.player2_id : sess.player1_id;
-        const youCards = rows
-            .filter((r) => r.playerId === youId)
-            .map((r) => ({
-                id: r.id,
-                image_url: r.image_url,
-                cost: r.cost,
-                attack: r.attack,
-                defense: r.defense,
-            }));
-        const oppCards = rows
-            .filter((r) => r.playerId !== youId)
-            .map((r) => ({
-                id: r.id,
-                image_url: r.image_url,
-                cost: r.cost,
-                attack: r.attack,
-                defense: r.defense,
-            }));
+        const youCards = shuffle(
+            rows
+                .filter((r) => r.playerId === youId)
+                .map((r) => ({
+                    id: r.id,
+                    image_url: r.image_url,
+                    cost: r.cost,
+                    attack: r.attack,
+                    defense: r.defense,
+                }))
+        );
+        const oppCards = shuffle(
+            rows
+                .filter((r) => r.playerId !== youId)
+                .map((r) => ({
+                    id: r.id,
+                    image_url: r.image_url,
+                    cost: r.cost,
+                    attack: r.attack,
+                    defense: r.defense,
+                }))
+        );
 
         const oppSocketId = socketsByUserId.get(oppId);
         const oppSock = oppSocketId
