@@ -3,16 +3,23 @@
 _All commands must be written from the root directory_
 
 ##  To create database
-`mysql -u root < db/schema.sql`
+```
+mysql -u root < db/schema.sql
+```
 
 ## To load data
-`mysql -u norbarg -p < db/data.sql`
+```
+mysql -u norbarg -p < db/data.sql
+```
 
- Password is _securepass_
+ Password is `securepass`
 
  ## To install node_modules and start app
- `npm install`
- 
- `npm start`
+ ```
+ npm install
+ ```
+```
+npm start
+```
 
  ### We wish you luck and enjoyable game
